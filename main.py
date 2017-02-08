@@ -1,9 +1,14 @@
 import requests
+import sched, time
 from time import sleep
 import RPi.GPIO as GPIO
+
 GPIO.setmode(GPIO.BOARD)
-chan_list = [29,31,33,35]
-GPIO.setup(chan_list, GPIO.OUT, initial=GPIO.HIGH)
+bin_chan = [29, 31, 33, 35]  # biinair led driver chip
+panel_chan = [3, 5, 7, 11, 13, 15]  # transistors panels
+bin_number = [0, 0, 0, 0] * 6
+GPIO.setup(panel_chan, GPIO.OUT, initial=GPIO.LOW)
+GPIO.setup(bin_chan, GPIO.OUT, initial=GPIO.HIGH)
 facebook = False
 
 GOOGLE_KEY = "AIzaSyDjymcGFExAFSfujMUhd8lgJ0AelCDuZJw"
@@ -27,25 +32,36 @@ def get_youtube_subs():
 def get_facebook_likes():
     pass
 
+
 def convert_bin(value):
     print(value)
-    bin_value = [[0,0,0,0]]*6
+    bin_value = [[0, 0, 0, 0]] * 6
 
     value_sep = [int(d) for d in str(value)]
-    #convert to list with binair
-    for i,x in enumerate(reversed(value_sep)):
-        bin_value[-i-1] = [int(d) for d in "{0:04b}".format(x)]
+    # convert to list with binair
+    for i, x in enumerate(reversed(value_sep)):
+        bin_value[-i - 1] = [int(d) for d in "{0:04b}".format(x)]
     print(bin_value)
 
     return bin_value
 
-def update_clock(bin):
-    print(bin[5])
-    GPIO.output(chan_list,bin[5])
 
-while True:
+def update(sc):
+    global bin_number
     if facebook:
-        update_clock(convert_bin(get_facebook_likes()))
+        bin_number = convert_bin(get_facebook_likes())
     else:
-        update_clock(convert_bin(get_youtube_subs()))
-    sleep(5.0)
+        bin_number = convert_bin(get_youtube_subs())
+    s.enter(60, 1, update, (sc,))
+
+
+s = sched.scheduler(time.time, time.sleep)
+s.enter(5, 1, update, (s,))
+s.run()
+while True:
+    for i, n in bin:
+        GPIO.output(bin_chan, bin)
+        print(bin)
+        GPIO.output(panel_chan[i], GPIO.HIGH)
+        sleep(.1)
+        GPIO.output(panel_chan[i], GPIO.LOW)
